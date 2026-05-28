@@ -1,39 +1,35 @@
 import React from 'react';
-import { Truck, Headset, Zap, MapPin, Users, HeartHandshake } from 'lucide-react';
+import { whyChooseFeatures } from '../data/siteContent';
 
 const WhyChooseUs = () => {
-  const features = [
-    { id: '01', title: "Free & On-time Sample Collection", icon: <Truck size={32} />, desc: "Home collection at your comfort." },
-    { id: '02', title: "Free Report Counselling", icon: <Headset size={32} />, desc: "Expert guidance on your results." },
-    { id: '03', title: "Fast & Accurate Test Reports", icon: <Zap size={32} />, desc: "Get results within 24 hours." },
-    { id: '04', title: "Presence in 250+ Cities", icon: <MapPin size={32} />, desc: "Widest network across India." },
-    { id: '05', title: "2500+ Phlebotomists", icon: <Users size={32} />, desc: "Largest fleet of experts." },
-    { id: '06', title: "85 Lakh+ Satisfied Customers", icon: <HeartHandshake size={32} />, desc: "Trust of millions." },
-  ];
-
   return (
-    <section className="py-20 bg-white">
-      <div className="container mx-auto px-6 text-center">
-        <h2 className="text-4xl font-black text-[#009494] mb-16 tracking-tight">
-          Why Choose <span className="text-[#FF6F61]">Healthians</span>
-        </h2>
-        
-        <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-8">
-          {features.map((f) => (
-            <div key={f.id} className="group flex flex-col items-center">
-              <div className="relative mb-6">
-                <span className="absolute -top-4 -left-6 text-4xl font-black text-gray-100 italic group-hover:text-teal-50 transition-colors">
-                  {f.id}
-                </span>
-                <div className="relative z-10 p-5 bg-teal-50 text-[#009494] rounded-2xl group-hover:bg-[#009494] group-hover:text-white transition-all duration-300 shadow-sm">
-                  {f.icon}
+    <section id="reports" className="hc-section hc-surface">
+      <div className="mx-auto max-w-7xl px-5 lg:px-8">
+        <div className="mb-16 flex flex-col justify-between gap-8 md:flex-row md:items-end">
+          <div>
+            <div className="mb-4 text-xs font-black uppercase tracking-[0.22em] text-[var(--hc-accent)]">Why patients choose us</div>
+            <h2 className="max-w-2xl text-3xl font-black leading-tight text-[var(--hc-text)] md:text-5xl">
+              Premium care details that make the service feel dependable.
+            </h2>
+          </div>
+          <p className="max-w-md text-sm font-medium leading-7 text-[var(--hc-muted)]">
+            From collection timing to report counselling, the interface now highlights operational trust instead of decorative noise.
+          </p>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {whyChooseFeatures.map((feature) => {
+            const Icon = feature.icon;
+            return (
+              <article key={feature.title} className="rounded-[12px] border border-[var(--hc-border)] bg-[var(--hc-soft)] p-8 transition hover:bg-[var(--hc-surface)] hover:shadow-lg hover:shadow-black/5">
+                <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-[10px] bg-[var(--hc-surface)] text-[var(--hc-accent)] shadow-sm">
+                  <Icon size={26} />
                 </div>
-              </div>
-              <h4 className="text-[13px] font-black leading-tight text-gray-700 uppercase tracking-tighter">
-                {f.title}
-              </h4>
-            </div>
-          ))}
+                <h3 className="text-lg font-black text-[var(--hc-text)]">{feature.title}</h3>
+                <p className="mt-4 text-sm font-medium leading-6 text-[var(--hc-muted)]">{feature.desc}</p>
+              </article>
+            );
+          })}
         </div>
       </div>
     </section>

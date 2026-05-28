@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { User, Mail, Phone, MapPin, Save, ShieldCheck, Loader2 } from 'lucide-react';
+import { API_BASE } from '../../services/apiConfig';
 
 const UserProfile = ({ user }) => {
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('info');
   const [formData, setFormData] = useState({
     name: user?.name || "",
     email: user?.email || "",
@@ -20,12 +23,21 @@ const UserProfile = ({ user }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setMessage('');
 
     try {
-      const response = await fetch(`http://localhost:5000/api/auth/update-profile/${user._id}`, {
+      const userId = user?._id || user?.id;
+      if (!userId) {
+        throw new Error('User id nahi mila. Please logout karke dobara login karein.');
+      }
+
+      const response = await fetch(`${API_BASE}/api/auth/update-profile-v2/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          phone: formData.phone.replace(/\D/g, '').slice(-10),
+        }),
       });
 
       const data = await response.json();
@@ -33,17 +45,21 @@ const UserProfile = ({ user }) => {
       if (response.ok) {
         // 1. LocalStorage update karein taaki refresh par purana data na dikhe
         const updatedUserData = { ...user, ...data.user };
-        localStorage.setItem('user', JSON.stringify(updatedUserData));
+        localStorage.setItem('userData', JSON.stringify(updatedUserData));
         
         alert("Profile update ho gayi hai! ✅");
         // Page reload ya state sync kar sakte hain agar sidebar mein naam turant badalna ho
-        window.location.reload(); 
+        setMessage('Profile update ho gayi hai.');
+        setMessageType('success');
+        setTimeout(() => window.location.reload(), 700);
       } else {
-        alert(data.message || "Update fail ho gaya");
+        setMessage(data.message || data.error || "Update fail ho gaya");
+        setMessageType('error');
       }
     } catch (err) {
       console.error("Profile Update Error:", err);
-      alert("Server se connect nahi ho pa rahe hain.");
+      setMessage(err.message || "Server se connect nahi ho pa rahe hain.");
+      setMessageType('error');
     } finally {
       setLoading(false);
     }
@@ -72,6 +88,15 @@ const UserProfile = ({ user }) => {
           </div>
 
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {message && (
+              <div className={`md:col-span-2 rounded-2xl px-4 py-3 text-sm font-bold ${
+                messageType === 'success'
+                  ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : 'border border-amber-200 bg-amber-50 text-amber-800'
+              }`}>
+                {message}
+              </div>
+            )}
             {/* Full Name */}
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Full Name</label>
@@ -103,7 +128,7 @@ const UserProfile = ({ user }) => {
               <div className="relative">
                 <Phone className="absolute left-4 top-3.5 text-slate-300" size={18} />
                 <input 
-                  type="text" name="phone" value={formData.phone} onChange={handleChange}
+                  type="text" name="phone" value={formData.phone} maxLength={10} onChange={(event) => setFormData({ ...formData, phone: event.target.value.replace(/\D/g, '').slice(-10) })}
                   className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-[#009494]/20 font-bold text-slate-700"
                 />
               </div>

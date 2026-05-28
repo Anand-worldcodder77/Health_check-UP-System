@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Upload, CheckCircle } from 'lucide-react';
+import { API_BASE } from '../services/apiConfig';
 
 const ImageUpload = ({ onUploadSuccess }) => {
   const [uploading, setUploading] = useState(false);
@@ -16,11 +17,11 @@ const ImageUpload = ({ onUploadSuccess }) => {
 
     setUploading(true);
     try {
-      const res = await axios.post('http://localhost:5000/api/upload', formData);
+      const res = await axios.post(`${API_BASE}/api/upload`, formData);
       onUploadSuccess(res.data.imageUrl); // Parent ko image URL bhej dega
-      alert("✅ Photo Upload Ho Gayi!");
-    } catch (err) {
-      alert("❌ Upload Fail!");
+      alert("Photo uploaded successfully.");
+    } catch {
+      alert("Upload failed.");
     } finally {
       setUploading(false);
     }

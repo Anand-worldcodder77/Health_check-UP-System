@@ -1,55 +1,90 @@
-import React from 'react';
-import { CalendarDays, AlertTriangle, FileText ,Clock,User, } from 'lucide-react'; // Icons ke liye
+import React, { useState } from 'react';
+import { Check, Clock, Coffee, ShieldCheck, Users } from 'lucide-react';
+import useCartStore from '../../store/useCartStore';
 
-const PackageCard = ({ data, onBookNow }) => {
-  const { name, tests, price, members, includes, specialNote, features } = data;
-  const originalPrice = price * 2; // Demo ke liye discount calculation
+const PackageCard = ({ data }) => {
+  const name = data.name || data.title;
+  const tests = data.tests || data.testCount || 0;
+  const price = data.offerPrice || data.discountedPrice || data.price || 0;
+  const members = data.members || 1;
+  const includes = data.includes || data.shortDescription || 'Includes selected diagnostic tests with home sample collection.';
+  const originalPrice = data.mrp || data.price || Math.round(price * 2);
+  const [added, setAdded] = useState(false);
+  const addItem = useCartStore((state) => state.addItem);
+
+  const handleBookNow = () => {
+    addItem({
+      ...data,
+      _id: data._id || data.id || data.name,
+      title: data.title || data.name,
+      type: 'PACKAGE',
+      price,
+      offerPrice: data.offerPrice || data.discountedPrice || price,
+    });
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1200);
+  };
 
   return (
-    <div className="bg-white p-6 rounded-[30px] border border-gray-100 shadow-sm hover:shadow-2xl transition-all duration-300 h-full flex flex-col justify-between group">
-      <div>
-        <div className="flex justify-between items-start mb-4">
-          <h3 className="text-lg font-black text-gray-800 leading-snug w-2/3 group-hover:text-[#009494] transition-colors">{name}</h3>
-          <div className="bg-teal-50 text-center px-4 py-2 rounded-xl">
-            <div className="text-3xl font-extrabold text-[#009494]">{tests}</div>
-            <div className="text-[10px] text-teal-800 font-bold uppercase tracking-widest">Tests</div>
+    <article className="relative flex h-full flex-col rounded-2xl border border-[var(--hc-border)] bg-[var(--hc-surface)] p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/8">
+      <div className="absolute -top-3 left-5 rounded-full bg-[var(--hc-warm)] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-white shadow-lg">
+        50% off
+      </div>
+
+      <div className="mb-5 mt-3 flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[var(--hc-accent-soft)] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--hc-accent)]">
+            <ShieldCheck size={13} />
+            Best Seller
           </div>
+          <h3 className="text-lg font-black leading-snug text-[var(--hc-text)] md:text-xl">{name}</h3>
         </div>
+        <div className="rounded-[12px] border border-[var(--hc-border)] bg-[var(--hc-soft)] px-4 py-3 text-center">
+          <div className="text-2xl font-black text-[var(--hc-text)]">{tests}</div>
+          <div className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--hc-muted)]">Tests</div>
+        </div>
+      </div>
 
-        <p className="text-gray-500 text-sm font-bold mb-4 italic">{includes}</p>
-        
-        {specialNote && (
-          <div className="bg-orange-50 text-[#FF6F61] text-xs font-bold p-3 rounded-xl mb-4 flex items-center gap-2">
-            <AlertTriangle size={16} />
-            {specialNote}
-          </div>
-        )}
+      <p className="line-clamp-3 text-sm font-medium leading-6 text-[var(--hc-muted)]">{includes}</p>
 
-        <div className="grid grid-cols-3 gap-2 border-t border-b border-gray-100 py-4 mb-5 text-[11px] font-bold text-gray-500">
-          <div className="flex items-center gap-2"> <Clock size={16} /> 12 hrs Fasting</div>
-          <div className="flex items-center gap-2"> <User size={16} /> Recommended</div>
-          <div className="flex items-center gap-2"> <FileText size={16} /> Reports in 16 hrs</div>
+      <div className="my-5 space-y-3 border-y border-[var(--hc-border)] py-4">
+        <div className="flex items-center gap-3 text-sm font-bold text-[var(--hc-muted)]">
+          <Clock size={17} className="text-[var(--hc-accent)]" />
+          Reports in 24 hrs
+        </div>
+        <div className="flex items-center gap-3 text-sm font-bold text-[var(--hc-muted)]">
+          <Coffee size={17} className="text-[var(--hc-accent)]" />
+          10-12 hrs fasting recommended
         </div>
       </div>
 
       <div className="mt-auto">
-        <div className="flex justify-between items-end mb-4">
+        <div className="mb-5 flex items-end justify-between gap-4">
           <div>
-            <span className="text-3xl font-black text-gray-900">₹{price}</span>
-            <span className="text-sm font-bold text-gray-400 line-through ml-2">₹{originalPrice}</span>
-            <span className="block text-xs text-gray-400 font-bold">per person</span>
+            <div className="text-2xl font-black text-[var(--hc-text)]">Rs. {price}</div>
+            <div className="text-sm font-bold text-[var(--hc-muted)]">
+              <span className="line-through">Rs. {originalPrice}</span>
+              <span className="ml-2">per person</span>
+            </div>
           </div>
-          <button className="text-gray-600 bg-gray-100 px-4 py-2 rounded-lg font-bold text-xs">{members} Members ▼</button>
+          <div className="flex items-center gap-2 rounded-[10px] bg-[var(--hc-soft)] px-3 py-2 text-xs font-black text-[var(--hc-muted)]">
+            <Users size={15} />
+            {members}
+          </div>
         </div>
 
-        <button 
-          onClick={() => onBookNow(name)}
-          className="w-full bg-[#009494] text-white py-4 rounded-xl font-black text-sm shadow-md hover:scale-[1.03] transition-all duration-300 uppercase tracking-widest"
+        <button
+          onClick={handleBookNow}
+          className={`flex w-full items-center justify-center gap-2 rounded-[12px] py-3.5 text-sm font-black uppercase tracking-[0.08em] text-white shadow-lg shadow-black/10 transition hover:opacity-90 ${added ? 'bg-emerald-500' : 'bg-[var(--hc-warm)]'}`}
         >
-          Book Now
+          {added ? (
+            <>
+              Added <Check size={16} />
+            </>
+          ) : 'Add to cart'}
         </button>
       </div>
-    </div>
+    </article>
   );
 };
 

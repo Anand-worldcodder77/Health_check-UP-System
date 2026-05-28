@@ -1,120 +1,350 @@
-import React, { useState } from 'react';
-import { CheckCircle, XCircle, Clock, Search, Filter, MoreVertical, Eye } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Clock, Download, Eye, FileUp, Filter, Loader2, RefreshCw, Search, XCircle } from 'lucide-react';
+import { API_BASE } from '../../services/apiConfig';
 
-const BookingManager = () => {
-  // --- MOCK DATA (Baaki isse hum database se connect karenge) ---
-  const [bookings, setBookings] = useState([
-    { id: 'BK-101', name: 'Rahul Sharma', test: 'Full Body Checkup', date: '2024-03-20', status: 'pending', amount: '₹1,999' },
-    { id: 'BK-102', name: 'Anita Verma', test: 'Diabetes Gold', date: '2024-03-21', status: 'confirmed', amount: '₹899' },
-    { id: 'BK-103', name: 'Amit Kumar', test: 'Thyroid Advance', date: '2024-03-22', status: 'rejected', amount: '₹1,200' },
-  ]);
+const workflowSteps = [
+  { from: ['Pending', 'BOOKED'], to: 'Confirmed', label: 'Confirm' },
+  { from: ['Confirmed'], to: 'PHLEBO_ASSIGNED', label: 'Assign collector' },
+  { from: ['PHLEBO_ASSIGNED'], to: 'SAMPLE_COLLECTED', label: 'Sample collected' },
+  { from: ['SAMPLE_COLLECTED'], to: 'IN_LAB', label: 'Move to lab' },
+];
 
-  // --- STATUS HANDLER ---
-  const updateStatus = (id, newStatus) => {
-    setBookings(bookings.map(book => 
-      book.id === id ? { ...book, status: newStatus } : book
-    ));
+const BookingManager = ({ scope = 'admin' }) => {
+  const [bookings, setBookings] = useState([]);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [uploadingReport, setUploadingReport] = useState(false);
+  const [selectedReportFile, setSelectedReportFile] = useState(null);
+
+  const loadBookings = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch(`${API_BASE}/api/bookings/all`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Unable to load bookings');
+      setBookings(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    loadBookings();
+  }, []);
+
+  const updateStatus = async (id, newStatus) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/bookings/update-status/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Status update failed');
+      setBookings((current) => current.map((booking) => (
+        booking._id === id ? { ...booking, status: newStatus } : booking
+      )));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const uploadReport = async (booking, file) => {
+    if (!file) return;
+    setUploadingReport(true);
+    setError('');
+    try {
+      const formData = new FormData();
+      formData.append('report', file);
+      const response = await fetch(`${API_BASE}/api/bookings/upload-report/${booking._id}`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Report upload failed');
+      setBookings((current) => current.map((item) => (item._id === booking._id ? data.data : item)));
+      setSelectedReportFile(null);
+      setSelectedBooking(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploadingReport(false);
+    }
+  };
+
+  const filteredBookings = useMemo(() => {
+    const search = query.trim().toLowerCase();
+    return bookings.filter((booking) => {
+      const statusMatches = statusFilter === 'All' || booking.status === statusFilter;
+      const text = `${booking.bookingId || booking._id} ${booking.userName} ${booking.userPhone} ${booking.selectedPackage}`.toLowerCase();
+      return statusMatches && (!search || text.includes(search));
+    });
+  }, [bookings, query, statusFilter]);
+
+  const stats = useMemo(() => ({
+    total: bookings.length,
+    confirmed: bookings.filter((booking) => ['Confirmed', 'BOOKED'].includes(booking.status)).length,
+    pending: bookings.filter((booking) => booking.status === 'Pending').length,
+    reports: bookings.filter((booking) => ['Report Uploaded', 'REPORT_READY'].includes(booking.status)).length,
+  }), [bookings]);
 
   const getStatusStyle = (status) => {
     switch (status) {
-      case 'confirmed': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
-      case 'rejected': return 'bg-rose-50 text-rose-600 border-rose-100';
-      default: return 'bg-amber-50 text-amber-600 border-amber-100';
+      case 'Confirmed':
+      case 'BOOKED':
+        return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+      case 'Rejected':
+      case 'CANCELLED':
+        return 'bg-rose-50 text-rose-600 border-rose-100';
+      case 'Report Uploaded':
+      case 'REPORT_READY':
+        return 'bg-indigo-50 text-indigo-600 border-indigo-100';
+      default:
+        return 'bg-amber-50 text-amber-600 border-amber-100';
     }
   };
 
   return (
-    <div className="p-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+    <div className="p-5 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-3xl font-black text-slate-800 tracking-tight">Booking Manager</h2>
-          <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em] mt-1">Manage online appointments</p>
+          <h2 className="text-2xl font-black tracking-tight text-slate-800 md:text-3xl">{scope === 'lab' ? 'Lab orders queue' : 'Operations queue'}</h2>
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+            {scope === 'lab'
+              ? 'Test orders, sample workflow, report upload and patient delivery'
+              : 'Live bookings, reports, collections and patient follow-ups'}
+          </p>
         </div>
-        
-        <div className="flex items-center gap-4">
+
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-            <input type="text" placeholder="Search ID or Name..." className="pl-12 pr-6 py-3 bg-white border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-[#009494]/20 w-64" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              type="text"
+              placeholder="Search ID, name, phone..."
+              className="w-full rounded-2xl border border-slate-100 bg-white py-3 pl-12 pr-5 text-sm font-bold outline-none focus:ring-2 focus:ring-[#009494]/20 md:w-72"
+            />
           </div>
-          <button className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-400 hover:text-[#009494] transition-all">
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className="rounded-2xl border border-slate-100 bg-white px-4 py-3 text-sm font-bold text-slate-500 outline-none"
+          >
+            {['All', 'Pending', 'Confirmed', 'PHLEBO_ASSIGNED', 'SAMPLE_COLLECTED', 'IN_LAB', 'Report Uploaded', 'BOOKED', 'CANCELLED'].map((status) => (
+              <option key={status}>{status}</option>
+            ))}
+          </select>
+          <button onClick={loadBookings} className="rounded-2xl border border-slate-100 bg-white p-3 text-slate-400 transition hover:text-[#009494]">
+            <RefreshCw size={20} />
+          </button>
+          <button className="rounded-2xl border border-slate-100 bg-white p-3 text-slate-400">
             <Filter size={20} />
           </button>
         </div>
       </div>
 
-      {/* Table Section */}
-      <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50/50 border-b border-slate-100">
-              <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Patient & ID</th>
-              <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Test Details</th>
-              <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
-              <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {bookings.map((item) => (
-              <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
-                <td className="px-8 py-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-[#009494] font-bold text-xs uppercase italic">
-                      {item.name.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="font-black text-slate-800 text-sm italic uppercase">{item.name}</p>
-                      <p className="text-[10px] font-bold text-slate-400 tracking-tighter uppercase mt-0.5">{item.id}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-8 py-6">
-                  <p className="font-bold text-slate-700 text-sm">{item.test}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{item.date}</p>
-                </td>
-                <td className="px-8 py-6">
-                  <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${getStatusStyle(item.status)}`}>
-                    {item.status}
-                  </span>
-                </td>
-                <td className="px-8 py-6">
-                  <div className="flex items-center justify-end gap-2">
-                    {item.status === 'pending' && (
-                      <>
-                        <button 
-                          onClick={() => updateStatus(item.id, 'confirmed')}
-                          className="p-2.5 bg-emerald-50 text-emerald-500 rounded-xl hover:bg-emerald-500 hover:text-white transition-all shadow-sm"
-                          title="Confirm Booking"
-                        >
-                          <CheckCircle size={18} />
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          ['Total', stats.total],
+          ['Confirmed', stats.confirmed],
+          ['Pending', stats.pending],
+          ['Reports ready', stats.reports],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-[22px] border border-slate-100 bg-white p-5 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p>
+            <p className="mt-2 text-3xl font-black text-slate-800">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      {error && <div className="mb-4 rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm font-bold text-rose-600">{error}</div>}
+
+      <div className="overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-sm">
+        {loading ? (
+          <div className="flex items-center justify-center gap-3 p-20 font-bold text-slate-400">
+            <Loader2 className="animate-spin" /> Loading bookings...
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] border-collapse text-left">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/70">
+                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Patient & ID</th>
+                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Test Details</th>
+                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Visit</th>
+                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
+                  <th className="px-6 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filteredBookings.map((item) => (
+                  <tr key={item._id} className="transition-colors hover:bg-slate-50/60">
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-xs font-black uppercase text-[#009494]">
+                          {(item.userName || 'P').charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-black uppercase text-slate-800">{item.userName || 'Patient'}</p>
+                          <p className="mt-0.5 text-[10px] font-bold uppercase tracking-tighter text-slate-400">{item.bookingId || item._id}</p>
+                          <p className="mt-0.5 text-[10px] font-bold text-slate-400">{item.userPhone || '-'}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <p className="text-sm font-bold text-slate-700">{item.selectedPackage || 'Health checkup'}</p>
+                      <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Rs. {(item.totalAmount || 0).toLocaleString()}</p>
+                    </td>
+                    <td className="px-6 py-5">
+                      <p className="text-sm font-bold text-slate-700">{new Date(item.bookingDate || item.createdAt).toLocaleDateString('en-IN')}</p>
+                      <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">{item.slot?.timeWindow || 'Slot pending'}</p>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className={`rounded-full border px-4 py-1.5 text-[9px] font-black uppercase tracking-widest ${getStatusStyle(item.status)}`}>
+                        {item.status || 'Pending'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex items-center justify-end gap-2">
+                        {workflowSteps
+                          .filter((step) => step.from.includes(item.status || 'Pending'))
+                          .map((step) => (
+                            <button key={step.to} onClick={() => updateStatus(item._id, step.to)} className="rounded-xl bg-emerald-50 px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.08em] text-emerald-600 transition hover:bg-emerald-600 hover:text-white" title={step.label}>
+                              {step.label}
+                            </button>
+                          ))}
+                        {!['CANCELLED', 'Report Uploaded', 'REPORT_READY'].includes(item.status) && (
+                          <button onClick={() => updateStatus(item._id, 'CANCELLED')} className="rounded-xl bg-rose-50 p-2.5 text-rose-500 transition hover:bg-rose-500 hover:text-white" title="Cancel booking">
+                            <XCircle size={18} />
+                          </button>
+                        )}
+                        {(item.reportUrl || item.reportPdfUrl) ? (
+                          <a
+                            href={item.reportUrl || item.reportPdfUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-2 rounded-xl bg-indigo-50 px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.08em] text-indigo-700 transition hover:bg-indigo-600 hover:text-white"
+                            title="Download uploaded report"
+                          >
+                            <Download size={16} /> Download
+                          </a>
+                        ) : (
+                          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-[#009494] px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.08em] text-white transition hover:bg-slate-950" title="Upload patient report PDF">
+                            <FileUp size={16} /> Upload PDF
+                            <input
+                              type="file"
+                              accept="application/pdf"
+                              disabled={uploadingReport}
+                              onChange={(event) => {
+                                uploadReport(item, event.target.files?.[0]);
+                                event.target.value = '';
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                        <button onClick={() => {
+                          setSelectedReportFile(null);
+                          setSelectedBooking(item);
+                        }} className="rounded-xl bg-slate-50 p-2.5 text-slate-400 transition hover:bg-slate-900 hover:text-white">
+                          <Eye size={18} />
                         </button>
-                        <button 
-                          onClick={() => updateStatus(item.id, 'rejected')}
-                          className="p-2.5 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-sm"
-                          title="Reject Booking"
-                        >
-                          <XCircle size={18} />
-                        </button>
-                      </>
-                    )}
-                    <button className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white transition-all">
-                      <Eye size={18} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        
-        {bookings.length === 0 && (
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {!loading && filteredBookings.length === 0 && (
           <div className="p-20 text-center">
-            <Clock size={48} className="mx-auto text-slate-200 mb-4" />
-            <p className="text-slate-400 font-bold italic">No bookings found for today.</p>
+            <Clock size={48} className="mx-auto mb-4 text-slate-200" />
+            <p className="font-bold text-slate-400">No bookings found.</p>
           </div>
         )}
       </div>
+
+      {selectedBooking && (
+        <div className="fixed inset-0 z-[700] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl rounded-[28px] bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#009494]">Booking details</p>
+                <h3 className="mt-1 text-2xl font-black text-slate-800">{selectedBooking.userName || 'Patient'}</h3>
+              </div>
+              <button onClick={() => {
+                setSelectedReportFile(null);
+                setSelectedBooking(null);
+              }} className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-black text-slate-500">Close</button>
+            </div>
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {[
+                ['Booking ID', selectedBooking.bookingId || selectedBooking._id],
+                ['Phone', selectedBooking.userPhone || '-'],
+                ['Package', selectedBooking.selectedPackage || '-'],
+                ['Status', selectedBooking.status || '-'],
+                ['Address', selectedBooking.address || selectedBooking.collectionAddress?.fullAddress || '-'],
+                ['Slot', selectedBooking.slot?.timeWindow || '-'],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+                  <p className="mt-2 text-sm font-bold text-slate-800">{value}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Report PDF</p>
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                {(selectedBooking.reportUrl || selectedBooking.reportPdfUrl) ? (
+                  <a href={selectedBooking.reportUrl || selectedBooking.reportPdfUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-50 px-4 text-xs font-black uppercase tracking-[0.08em] text-indigo-700 transition hover:bg-indigo-600 hover:text-white">
+                    <Download size={16} /> Download uploaded report
+                  </a>
+                ) : (
+                  <p className="text-sm font-bold text-slate-500">No report uploaded yet.</p>
+                )}
+                <label className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black uppercase tracking-[0.08em] text-slate-700 transition hover:border-[#009494] hover:text-[#009494]">
+                  <FileUp size={16} /> Choose PDF
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    disabled={uploadingReport}
+                    onChange={(event) => {
+                      setSelectedReportFile(event.target.files?.[0] || null);
+                      event.target.value = '';
+                    }}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              {selectedReportFile && (
+                <div className="mt-3 flex flex-col gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="min-w-0 truncate text-xs font-black text-emerald-800">
+                    Selected: {selectedReportFile.name}
+                  </p>
+                  <button
+                    type="button"
+                    disabled={uploadingReport}
+                    onClick={() => uploadReport(selectedBooking, selectedReportFile)}
+                    className="inline-flex h-10 items-center justify-center rounded-xl bg-[#009494] px-4 text-xs font-black uppercase tracking-[0.08em] text-white transition hover:bg-slate-950 disabled:cursor-wait disabled:bg-slate-300"
+                  >
+                    {uploadingReport ? 'Submitting...' : 'Submit report'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -18,52 +18,52 @@ const BookingCounter = () => {
   }, []);
 
   return (
-    <div className="bg-slate-900 py-6 border-y border-white/10 overflow-hidden relative">
+    <div className="bg-slate-900 py-10 border-y border-white/10 overflow-hidden relative">
       {/* Background Glow Effect */}
       <div className="absolute top-0 left-1/4 w-64 h-full bg-blue-600/20 blur-[100px]"></div>
       
-      <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-around items-center gap-8 relative z-10">
+      <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-around items-center gap-12 relative z-10">
         
         {/* Counter 1: Total Samples */}
-        <div className="flex items-center gap-4 group">
-          <div className="p-3 bg-blue-600/20 rounded-2xl group-hover:bg-blue-600/40 transition-colors">
-            <Droplets className="text-blue-400 w-6 h-6" />
+        <div className="flex items-center gap-5 group">
+          <div className="p-4 bg-blue-600/20 rounded-2xl group-hover:bg-blue-600/40 transition-colors">
+            <Droplets className="text-blue-400 w-7 h-7" />
           </div>
           <div>
-            <div className="text-2xl font-black text-white tabular-nums tracking-tight">
+            <div className="text-3xl font-black text-white tabular-nums tracking-tight">
               {samples.toLocaleString()}+
             </div>
-            <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">
+            <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-1">
               Samples Collected Today
             </div>
           </div>
         </div>
 
         {/* Counter 2: Active Bookings */}
-        <div className="flex items-center gap-4 group">
-          <div className="p-3 bg-green-600/20 rounded-2xl group-hover:bg-green-600/40 transition-colors">
-            <Users className="text-green-400 w-6 h-6 animate-pulse" />
+        <div className="flex items-center gap-5 group">
+          <div className="p-4 bg-green-600/20 rounded-2xl group-hover:bg-green-600/40 transition-colors">
+            <Users className="text-green-400 w-7 h-7 animate-pulse" />
           </div>
           <div>
-            <div className="text-2xl font-black text-white tabular-nums tracking-tight">
+            <div className="text-3xl font-black text-white tabular-nums tracking-tight">
               {activeUsers}
             </div>
-            <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">
+            <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-1">
               Patients Booking Now
             </div>
           </div>
         </div>
 
         {/* Counter 3: Lab Safety */}
-        <div className="flex items-center gap-4 group">
-          <div className="p-3 bg-teal-600/20 rounded-2xl group-hover:bg-teal-600/40 transition-colors">
-            <ShieldCheck className="text-teal-400 w-6 h-6" />
+        <div className="flex items-center gap-5 group">
+          <div className="p-4 bg-teal-600/20 rounded-2xl group-hover:bg-teal-600/40 transition-colors">
+            <ShieldCheck className="text-teal-400 w-7 h-7" />
           </div>
           <div>
-            <div className="text-2xl font-black text-white tracking-tight uppercase">
+            <div className="text-3xl font-black text-white tracking-tight uppercase">
               ISO 9001:2015
             </div>
-            <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">
+            <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-1">
               Certified Safety Standards
             </div>
           </div>

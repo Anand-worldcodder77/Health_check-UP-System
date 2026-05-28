@@ -11,34 +11,32 @@ const WhatsAppWidget = () => {
   };
 
   return (
-    <div className="fixed bottom-10 right-10 z-[400] group">
+    <div className="fixed bottom-8 right-4 z-[400] group">
       {/* Tooltip Popup */}
       <div className="absolute bottom-20 right-0 scale-0 group-hover:scale-100 transition-all duration-300 origin-bottom-right">
-        <div className="bg-white p-4 rounded-3xl shadow-2xl border border-emerald-100 w-48 mb-2 relative">
-          <p className="text-[11px] font-black text-slate-800 leading-tight uppercase tracking-tight">
-            Koi sawaal hai? <br/> 
-            <span className="text-emerald-500">Abhi chat karein!</span>
+        <div className="mb-2 w-44 rounded-[12px] border border-[var(--hc-border)] bg-[var(--hc-surface)] p-3 shadow-xl">
+          <p className="text-[11px] font-black text-[var(--hc-text)] leading-tight">
+            Need help choosing a package?
           </p>
-          <div className="absolute -bottom-2 right-6 w-4 h-4 bg-white border-b border-r border-emerald-100 rotate-45"></div>
         </div>
       </div>
 
       {/* Main WhatsApp Button */}
       <button
         onClick={openWhatsApp}
-        className="relative flex items-center justify-center w-16 h-16 bg-[#25D366] text-white rounded-full shadow-[0_20px_50px_rgba(37,211,102,0.4)] hover:scale-110 active:scale-90 transition-all duration-300 group"
+        className="relative flex h-12 w-12 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg transition-all duration-300 hover:scale-105 active:scale-95"
       >
         {/* Ring Animation */}
         <span className="absolute inset-0 rounded-full bg-[#25D366] animate-ping opacity-20"></span>
         
         <div className="relative z-10">
-          <MessageCircle size={30} strokeWidth={2.5} className="group-hover:hidden" />
-          <Send size={28} className="hidden group-hover:block animate-in zoom-in duration-200" />
+          <MessageCircle size={23} strokeWidth={2.5} className="group-hover:hidden" />
+          <Send size={22} className="hidden group-hover:block animate-in zoom-in duration-200" />
         </div>
       </button>
 
       {/* Online Status Badge */}
-      <span className="absolute top-1 right-1 w-4 h-4 bg-emerald-400 border-4 border-white rounded-full shadow-sm"></span>
+      <span className="absolute right-0.5 top-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-300 shadow-sm"></span>
     </div>
   );
 };

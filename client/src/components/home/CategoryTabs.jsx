@@ -1,26 +1,24 @@
 import React from 'react';
+import { careCategories } from '../../data/siteContent';
 
-const categories = [
-  "Full Body Checkup", "Fever", "STD", "Vitamins", 
-  "Diabetes", "Heart", "Thyroid", "Kidney", "Allergy"
-];
-
-const CategoryTabs = ({ activeTab, onTabClick }) => {
+const CategoryTabs = ({ activeTab, onTabClick, categories = careCategories }) => {
   return (
-    <div className="flex items-center justify-center space-x-2 py-6 overflow-x-auto no-scrollbar border-b border-gray-100">
-      {categories.map((tab, index) => (
-        <button
-          key={tab}
-          onClick={() => onTabClick(tab)}
-          className={`px-6 py-3 rounded-full font-bold text-sm whitespace-nowrap transition-all duration-300
-            ${activeTab === tab 
-              ? 'bg-[#009494] text-white shadow-lg' 
-              : 'bg-white text-gray-700 hover:bg-teal-50 hover:text-[#009494] border border-gray-100'
+    <div className="overflow-x-auto border-b border-[var(--hc-border)] pb-4">
+      <div className="flex min-w-max items-center gap-2">
+        {categories.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => onTabClick(tab)}
+            className={`rounded-[12px] px-4 py-2.5 text-sm font-black transition ${
+              activeTab === tab
+                ? 'bg-[var(--hc-brand)] text-[var(--hc-brand-text)] shadow-lg shadow-black/10'
+                : 'bg-[var(--hc-soft)] text-[var(--hc-muted)] hover:text-[var(--hc-text)]'
             }`}
-        >
-          {tab}
-        </button>
-      ))}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
     </div>
   );
 };

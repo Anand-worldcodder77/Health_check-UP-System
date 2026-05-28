@@ -1,0 +1,26 @@
+# Environment and secrets
+.env
+.env.*
+server/.env
+client/.env
+client/.env.*
+
+# Dependencies
+node_modules/
+server/node_modules/
+client/node_modules/
+
+# Build output
+dist/
+client/dist/
+
+# Runtime files
+*.log
+server/*.log
+server/uploads/
+
+# OS/editor files
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json

@@ -8,6 +8,16 @@ require('dotenv').config();
 // --- 1. ROUTES & MODELS IMPORT ---
 const callbackRoutes = require('./routes/callbackRoutes');
 const authRoutes = require('./routes/authRoutes'); 
+const bookingRoutes = require('./routes/bookingRoutes');
+const catalogRoutes = require('./routes/catalogRoutes');
+const slotRoutes = require('./routes/slotRoutes');
+const platformBookingRoutes = require('./routes/platformBookingRoutes');
+const doctorApplicationRoutes = require('./routes/doctorApplicationRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const doctorRoutes = require('./routes/doctorRoutes');
+const consultationRoutes = require('./routes/consultationRoutes');
+const chatbotRoutes = require('./routes/chatbotRoutes');
 const Booking = require('./models/Booking');
 const sendEmail = require('./utils/sendEmail');
 
@@ -26,7 +36,16 @@ const storage = multer.diskStorage({
     cb(null, `${Date.now()}-${file.originalname}`);
   }
 });
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    if (['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only prescription image or PDF can be uploaded.'), false);
+    }
+  },
+});
 
 const reportStorage = multer.diskStorage({
   destination: './uploads/reports/',
@@ -54,6 +73,16 @@ mongoose.connect(process.env.MONGO_URI)
 // --- 5. SYSTEM INTEGRATIONS ---
 app.use('/api/callbacks', callbackRoutes); 
 app.use('/api/auth', authRoutes); 
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/catalog', catalogRoutes);
+app.use('/api/slots', slotRoutes);
+app.use('/api/platform/bookings', platformBookingRoutes);
+app.use('/api/doctor-applications', doctorApplicationRoutes);
+app.use('/api/uploads', uploadRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/doctor', doctorRoutes);
+app.use('/api/consultations', consultationRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 
 // --- 6. ROUTES ---
 
@@ -82,16 +111,32 @@ app.post('/api/bookings/manual-add', async (req, res) => {
   }
 });
 
-// Image Upload API
-app.post('/api/upload', upload.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).send("No file uploaded");
-  res.json({ imageUrl: `http://localhost:5000/uploads/${req.file.filename}` });
+const handlePrescriptionUpload = (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (!err) return next();
+    return res.status(400).json({ error: err.message || 'Upload failed.' });
+  });
+};
+
+// Prescription/Image Upload API
+app.post('/api/upload', handlePrescriptionUpload, (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  res.json({ imageUrl: `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}` });
 });
 
+const handleReportUpload = (req, res, next) => {
+  uploadReport.single('report')(req, res, (err) => {
+    if (!err) return next();
+    return res.status(400).json({ error: err.message || 'Report upload failed.' });
+  });
+};
+
 // Report Upload Route
-app.post('/api/bookings/upload-report/:id', uploadReport.single('report'), async (req, res) => {
+app.post('/api/bookings/upload-report/:id', handleReportUpload, async (req, res) => {
   try {
-    const reportUrl = `http://localhost:5000/uploads/reports/${req.file.filename}`;
+    if (!req.file) return res.status(400).json({ error: 'PDF report file is required.' });
+
+    const reportUrl = `${req.protocol}://${req.get('host')}/uploads/reports/${req.file.filename}`;
     const updatedBooking = await Booking.findByIdAndUpdate(
       req.params.id,
       { reportUrl: reportUrl, status: 'Report Uploaded' },
@@ -163,6 +208,55 @@ app.get('/api/admin/callbacks', async (req, res) => {
   }
 });
 
+const normalizeProfilePhone = (phone = '') => phone.toString().replace(/\D/g, '').slice(-10);
+
+app.put('/api/auth/update-profile-v2/:id', async (req, res) => {
+  try {
+    const User = mongoose.model('User');
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Valid user id nahi mila. Please login again.' });
+    }
+
+    const phone = normalizeProfilePhone(req.body.phone);
+    if (phone && !/^\d{10}$/.test(phone)) {
+      return res.status(400).json({ message: 'Valid 10 digit phone number required hai.' });
+    }
+
+    if (phone) {
+      const existingPhoneUser = await User.findOne({ phone, _id: { $ne: id } });
+      if (existingPhoneUser) {
+        return res.status(409).json({ message: 'Ye phone number kisi aur account me already used hai.' });
+      }
+    }
+
+    const updates = {
+      name: req.body.name?.toString().trim(),
+      ...(phone ? { phone } : {}),
+      address: req.body.address?.toString().trim(),
+      age: req.body.age === '' || req.body.age === undefined ? undefined : Number(req.body.age),
+      gender: req.body.gender || 'Not Specified',
+    };
+
+    Object.keys(updates).forEach((key) => updates[key] === undefined && delete updates[key]);
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      updates,
+      { returnDocument: 'after', runValidators: true }
+    ).select('-password -otp');
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User account nahi mila. Please login again.' });
+    }
+
+    res.status(200).json({ message: 'Profile updated successfully.', user: updatedUser });
+  } catch (err) {
+    res.status(400).json({ message: err.message || 'Update fail ho gaya.' });
+  }
+});
+
 // Update User Profile
 app.put('/api/auth/update-profile/:id', async (req, res) => {
   try {
@@ -186,7 +280,7 @@ app.delete('/api/bookings/delete/:id', async (req, res) => {
 });
 
 // --- 7. SERVER START ---
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`👤 Manual Patient API: http://localhost:${PORT}/api/bookings/manual-add`);

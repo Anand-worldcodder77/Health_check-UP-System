@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination } from 'swiper/modules';
 import 'swiper/css';
@@ -7,34 +8,68 @@ import 'swiper/css/pagination';
 
 import CategoryTabs from '../home/CategoryTabs';
 import PackageCard from './PackageCard';
-import { packageData } from '../../data/packageData'; // Data ko alag file se layenge
+import { packageData } from '../../data/packageData';
+import { API_BASE } from '../../services/apiConfig';
+
+const mapApiPackage = (item) => ({
+  ...item,
+  id: item._id,
+  name: item.title,
+  tests: item.testCount || item.includesTests?.length || 0,
+  price: item.discountedPrice,
+  mrp: item.price,
+  members: 1,
+  includes: item.shortDescription || `${item.testCount || 0} tests included. Report in ${item.reportTimeHours || 24} hrs.`,
+});
 
 const PackagesSlider = ({ onBookClick }) => {
-  const [activeTab, setActiveTab] = useState("Full Body Checkup");
+  const [activeTab, setActiveTab] = useState('Full Body Checkup');
+  const [packages, setPackages] = useState(packageData);
+  const categories = useMemo(() => Array.from(new Set(packages.map((pkg) => pkg.category).filter(Boolean))), [packages]);
+  const filteredData = packages.filter((pkg) => pkg.category === activeTab);
 
-  // Category ke basis par data filter karna
-  const filteredData = packageData.filter(pkg => pkg.category === activeTab);
+  useEffect(() => {
+    let cancelled = false;
+    const loadPackages = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/catalog/packages`);
+        if (!response.ok) return;
+        const data = await response.json();
+        const apiPackages = (data.data || []).map(mapApiPackage);
+        if (!cancelled && apiPackages.length) {
+          setPackages(apiPackages);
+          setActiveTab(apiPackages[0].category || 'Full Body Checkup');
+        }
+      } catch {
+        /* keep static fallback */
+      }
+    };
+
+    loadPackages();
+    return () => { cancelled = true; };
+  }, []);
 
   return (
-    <div className="bg-gray-50 py-16">
-      <div className="max-w-7xl mx-auto px-6">
-        
-        {/* Title Section */}
-        <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-5xl font-black text-gray-900 tracking-tighter">
-            Best health checkup <span className="text-[#009494]">packages</span>
-          </h1>
-          <p className="text-gray-500 text-lg font-bold mt-2">Comprehensive health checkups for your family.</p>
+    <section id="packages" className="hc-section hc-surface">
+      <div className="mx-auto max-w-7xl px-5 lg:px-8">
+        <div className="mb-12 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <div>
+            <div className="mb-4 text-xs font-black uppercase tracking-[0.22em] text-[var(--hc-accent)]">Preventive packages</div>
+            <h2 className="hc-compact-title">
+              Most booked health checkup packages
+            </h2>
+          </div>
+          <p className="max-w-md text-sm font-medium leading-7 text-[var(--hc-muted)]">
+            Compare tests, fasting needs, report timing, and member pricing before you book.
+          </p>
         </div>
 
-        {/* --- PROFESSIONAL TABS --- */}
-        <CategoryTabs activeTab={activeTab} onTabClick={setActiveTab} />
+        {categories.length > 0 && <CategoryTabs categories={categories} activeTab={activeTab} onTabClick={setActiveTab} />}
 
-        {/* --- SWIPER SLIDER --- */}
-        <div className="relative pt-12 pb-16">
+        <div className="relative pt-12">
           <Swiper
             modules={[Navigation, Pagination]}
-            spaceBetween={30}
+            spaceBetween={28}
             slidesPerView={1}
             navigation={{
               nextEl: '.swiper-button-next-pkg',
@@ -42,27 +77,29 @@ const PackagesSlider = ({ onBookClick }) => {
             }}
             pagination={{ clickable: true, el: '.swiper-pagination-pkg' }}
             breakpoints={{
-              640: { slidesPerView: 2 },
-              1024: { slidesPerView: 3 },
+              700: { slidesPerView: 2 },
+              1080: { slidesPerView: 3 },
             }}
-            className="package-swiper"
+            className="package-swiper !pb-14"
           >
             {filteredData.map((pkg) => (
-              <SwiperSlide key={pkg.id}>
+              <SwiperSlide key={pkg.id} className="h-auto">
                 <PackageCard data={pkg} onBookNow={onBookClick} />
               </SwiperSlide>
             ))}
           </Swiper>
 
-          {/* Custom Navigation Buttons - Screenshot ke jaisa look */}
-          <div className="absolute top-1/2 -left-6 transform -translate-y-1/2 swiper-button-prev-pkg bg-white text-gray-400 w-12 h-12 rounded-full shadow-lg flex items-center justify-center cursor-pointer z-10 hover:bg-[#009494] hover:text-white transition-all duration-300 border border-gray-100">←</div>
-          <div className="absolute top-1/2 -right-6 transform -translate-y-1/2 swiper-button-next-pkg bg-white text-gray-400 w-12 h-12 rounded-full shadow-lg flex items-center justify-center cursor-pointer z-10 hover:bg-[#009494] hover:text-white transition-all duration-300 border border-gray-100">→</div>
-          
-          {/* Custom Pagination Points */}
-          <div className="swiper-pagination-pkg mt-8 text-center flex items-center justify-center"></div>
+          <button className="swiper-button-prev-pkg absolute -left-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-[8px] border border-[var(--hc-border)] bg-[var(--hc-surface)] text-[var(--hc-muted)] shadow-lg transition hover:bg-[var(--hc-brand)] hover:text-[var(--hc-brand-text)] md:-left-5" aria-label="Previous packages">
+            <ArrowLeft size={18} />
+          </button>
+          <button className="swiper-button-next-pkg absolute -right-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-[8px] border border-[var(--hc-border)] bg-[var(--hc-surface)] text-[var(--hc-muted)] shadow-lg transition hover:bg-[var(--hc-brand)] hover:text-[var(--hc-brand-text)] md:-right-5" aria-label="Next packages">
+            <ArrowRight size={18} />
+          </button>
+
+          <div className="swiper-pagination-pkg flex items-center justify-center" />
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 

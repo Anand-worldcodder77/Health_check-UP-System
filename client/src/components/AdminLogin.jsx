@@ -1,65 +1,132 @@
 import React, { useState } from 'react';
-import { Lock, User, ArrowRight } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, LockKeyhole, ShieldCheck, UserRoundCheck } from 'lucide-react';
+import { loginUser } from '../services/authApi';
 
 const AdminLogin = ({ onLogin }) => {
-  const [credentials, setCredentials] = useState({ username: '', password: '' });
+  const [credentials, setCredentials] = useState({ identifier: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    // Anand, abhi ke liye hum hardcoded credentials use kar rahe hain
-    // Username: admin | Password: anand2026
-    if (credentials.username === 'admin' && credentials.password === 'anand2026') {
-      onLogin(true); // Login success
-      setError('');
-    } else {
-      setError('❌ Galat ID ya Password h, dhyan se check karo!');
+    setLoading(true);
+    setError('');
+
+    const identifier = credentials.identifier.trim();
+    const isEmail = identifier.includes('@');
+
+    try {
+      const data = await loginUser({
+        password: credentials.password,
+        role: 'ADMIN',
+        ...(isEmail
+          ? { email: identifier.toLowerCase() }
+          : { phone: identifier.replace(/\D/g, '').slice(-10) }),
+      });
+
+      onLogin(data.user, data.token);
+    } catch (err) {
+      setError(err.message || 'Admin login failed');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#009494] p-6">
-      <div className="bg-white/10 backdrop-blur-2xl border border-white/20 p-10 rounded-[40px] shadow-2xl w-full max-w-md animate-in fade-in zoom-in duration-500">
-        <div className="text-center mb-10">
-          <div className="bg-white/20 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-white/30">
-            <Lock className="text-white" size={40} />
-          </div>
-          <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Admin Portal</h2>
-          <p className="text-white/60 font-bold text-sm mt-2">Sirf Anand hi access kar sakte hain.</p>
-        </div>
-
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div className="relative">
-            <User className="absolute left-4 top-4 text-white/50" size={20} />
-            <input 
-              type="text" 
-              placeholder="Username" 
-              required
-              className="w-full bg-white/10 border border-white/20 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-white/40 outline-none focus:bg-white/20 transition-all font-bold"
-              onChange={(e) => setCredentials({...credentials, username: e.target.value})}
-            />
+    <div className="flex min-h-screen items-center justify-center bg-[#f5f7fa] p-4">
+      <div className="grid w-full max-w-5xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl shadow-slate-300/40 lg:grid-cols-[0.9fr_1.1fr]">
+        <section className="hidden bg-slate-950 p-10 text-white lg:flex lg:flex-col lg:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-lg bg-teal-500">
+              <ShieldCheck size={24} />
+            </div>
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.16em]">Admin Portal</p>
+              <p className="text-xs font-semibold text-white/55">Database protected access</p>
+            </div>
           </div>
 
-          <div className="relative">
-            <Lock className="absolute left-4 top-4 text-white/50" size={20} />
-            <input 
-              type="password" 
-              placeholder="Password" 
-              required
-              className="w-full bg-white/10 border border-white/20 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-white/40 outline-none focus:bg-white/20 transition-all font-bold"
-              onChange={(e) => setCredentials({...credentials, password: e.target.value})}
-            />
+          <div>
+            <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-teal-100">
+              <LockKeyhole size={15} />
+              Role verified
+            </p>
+            <h1 className="text-4xl font-black leading-tight tracking-normal">
+              Secure dashboard access for lab operations.
+            </h1>
+            <p className="mt-5 text-sm font-medium leading-7 text-slate-300">
+              Admin credentials are checked from MongoDB, passwords are hashed, and customer accounts cannot open this area.
+            </p>
+          </div>
+        </section>
+
+        <section className="p-6 sm:p-10">
+          <div className="mb-8">
+            <div className="mb-5 grid h-12 w-12 place-items-center rounded-lg bg-teal-600 text-white">
+              <UserRoundCheck size={25} />
+            </div>
+            <h2 className="text-2xl font-black text-slate-950">Admin sign in</h2>
+            <p className="mt-2 text-sm font-medium text-slate-500">
+              Email ya mobile number se dashboard unlock karein.
+            </p>
           </div>
 
-          {error && <p className="text-red-200 text-xs font-black text-center animate-bounce">{error}</p>}
+          {error && (
+            <div className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+              {error}
+            </div>
+          )}
 
-          <button 
-            type="submit"
-            className="w-full bg-white text-[#009494] py-5 rounded-2xl font-black text-lg shadow-xl hover:scale-105 transition-all flex items-center justify-center group"
-          >
-            ENTER DASHBOARD <ArrowRight className="ml-2 group-hover:translate-x-2 transition-transform" />
-          </button>
-        </form>
+          <form onSubmit={handleLogin} className="space-y-5">
+            <label className="block">
+              <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                Admin email or mobile
+              </span>
+              <input
+                value={credentials.identifier}
+                onChange={(e) => setCredentials((current) => ({ ...current, identifier: e.target.value }))}
+                placeholder="admin@example.com"
+                required
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-bold text-slate-900 outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                Password
+              </span>
+              <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 px-4 focus-within:border-teal-500 focus-within:ring-4 focus-within:ring-teal-500/10">
+                <LockKeyhole size={18} className="text-slate-400" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={credentials.password}
+                  onChange={(e) => setCredentials((current) => ({ ...current, password: e.target.value }))}
+                  placeholder="Password"
+                  required
+                  className="min-w-0 flex-1 bg-transparent px-3 py-4 text-sm font-bold text-slate-900 outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-200 hover:text-slate-700"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </label>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-slate-950 text-sm font-black uppercase tracking-[0.08em] text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              {loading ? 'Checking...' : 'Enter dashboard'}
+              {!loading && <ArrowRight size={18} />}
+            </button>
+          </form>
+        </section>
       </div>
     </div>
   );

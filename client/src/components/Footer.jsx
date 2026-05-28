@@ -1,100 +1,86 @@
-import React, { useState, useEffect } from 'react';
-import { Phone, Mail, MapPin, Facebook, Instagram, Twitter, ShieldCheck } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Facebook, Instagram, Mail, MapPin, Phone, ShieldCheck, Twitter } from 'lucide-react';
+import { brandDefaults, careCategories } from '../data/siteContent';
 
 const Footer = () => {
-  // --- 1. SETTINGS STATE (Default values ke saath) ---
-  const [labSettings, setLabSettings] = useState({
-    labName: 'HealthChecks',
-    contact: '1800-572-0005',
-    address: '123 Health Street, Medical Hub, New Delhi',
-    email: 'support@healthchecks.com'
+  const [labSettings] = useState(() => {
+    const savedData = localStorage.getItem('labSettings');
+    return savedData ? { ...brandDefaults, ...JSON.parse(savedData) } : brandDefaults;
   });
 
-  // --- 2. DYNAMIC SYNC (Admin Panel se data uthana) ---
-  useEffect(() => {
-    const savedData = localStorage.getItem('labSettings');
-    if (savedData) {
-      const parsedData = JSON.parse(savedData);
-      setLabSettings({
-        labName: parsedData.labName || 'HealthChecks',
-        contact: parsedData.contact || '1800-572-0005',
-        address: parsedData.address || '123 Health Street, Medical Hub',
-        email: parsedData.email || 'support@healthchecks.com'
-      });
-    }
-  }, []);
+  const brandParts = labSettings.labName.trim().split(' ');
+  const firstBrand = brandParts[0] || brandDefaults.labName;
+  const restBrand = brandParts.slice(1).join(' ') || 'Checks';
 
   return (
-    <footer className="bg-slate-900 text-white pt-20 pb-10 px-10 rounded-t-[60px] relative overflow-hidden">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 relative z-10">
-        
-        {/* Brand Section */}
-        <div className="space-y-6">
-          <h2 className="text-3xl font-black italic tracking-tighter">
-            {labSettings.labName.split(' ')[0]}
-            <span className="text-[#009494]">
-              {labSettings.labName.split(' ').slice(1).join(' ') || 'PRO'}
-            </span>
-          </h2>
-          <p className="text-slate-400 text-sm font-medium leading-relaxed">
-            Advanced diagnostics and wellness tracking at your fingertips. Your health, our priority.
+    <footer className="bg-[var(--hc-brand)] px-5 py-20 text-[var(--hc-brand-text)] lg:px-8">
+      <div className="mx-auto grid max-w-7xl gap-12 md:grid-cols-[1.2fr_0.8fr_1fr_1fr]">
+        <div>
+          <div className="mb-7 flex items-center gap-4">
+            <span className="flex h-12 w-12 items-center justify-center rounded-[10px] bg-white/15 font-black text-lg">H</span>
+            <h2 className="text-2xl font-black">
+              {firstBrand}
+              <span className="opacity-70"> {restBrand}</span>
+            </h2>
+          </div>
+          <p className="max-w-sm text-sm font-medium leading-8 opacity-70">
+            Advanced diagnostics, transparent packages, and home collection built around preventive health.
           </p>
-          <div className="flex gap-4">
-            <div className="p-3 bg-white/5 rounded-2xl hover:bg-[#009494] transition-all cursor-pointer"><Facebook size={18} /></div>
-            <div className="p-3 bg-white/5 rounded-2xl hover:bg-[#009494] transition-all cursor-pointer"><Instagram size={18} /></div>
-            <div className="p-3 bg-white/5 rounded-2xl hover:bg-[#009494] transition-all cursor-pointer"><Twitter size={18} /></div>
+          <div className="mt-8 flex gap-4">
+            {[Facebook, Instagram, Twitter].map((Icon, index) => (
+              <button key={index} className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-white/10 transition hover:bg-white/20" aria-label="Social link">
+                <Icon size={20} />
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Quick Links */}
         <div>
-          <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#009494] mb-8">Quick Links</h4>
-          <ul className="space-y-4 text-slate-400 font-bold text-sm">
-            <li className="hover:text-white transition-colors cursor-pointer italic">Full Body Checkups</li>
-            <li className="hover:text-white transition-colors cursor-pointer italic">Diabetes Screening</li>
-            <li className="hover:text-white transition-colors cursor-pointer italic">Cancer Markers</li>
-            <li className="hover:text-white transition-colors cursor-pointer italic">Book Home Visit</li>
+          <h3 className="mb-7 text-xs font-black uppercase tracking-[0.2em] opacity-75">Packages</h3>
+          <ul className="space-y-4 text-sm font-bold opacity-70">
+            {careCategories.slice(0, 5).map((category) => (
+              <li key={category} className="transition hover:text-white">{category}</li>
+            ))}
           </ul>
         </div>
 
-        {/* Contact Info (Dynamic) */}
         <div>
-          <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#009494] mb-8">Contact Us</h4>
-          <ul className="space-y-6">
-            <li className="flex items-start gap-4">
-              <MapPin size={20} className="text-[#009494] shrink-0" />
-              <span className="text-slate-400 text-sm font-medium">{labSettings.address}</span>
+          <h3 className="mb-7 text-xs font-black uppercase tracking-[0.2em] opacity-75">Contact</h3>
+          <ul className="space-y-5 text-sm font-medium opacity-70">
+            <li className="flex gap-3">
+              <MapPin size={18} className="mt-0.5 shrink-0" />
+              {labSettings.address}
             </li>
-            <li className="flex items-center gap-4">
-              <Phone size={18} className="text-[#009494] shrink-0" />
-              <span className="text-slate-400 text-sm font-black tracking-widest">{labSettings.contact}</span>
+            <li className="flex items-center gap-3">
+              <Phone size={18} className="shrink-0" />
+              {labSettings.contact}
             </li>
-            <li className="flex items-center gap-4">
-              <Mail size={18} className="text-[#009494] shrink-0" />
-              <span className="text-slate-400 text-sm font-medium">{labSettings.email}</span>
+            <li className="flex items-center gap-3">
+              <Mail size={18} className="shrink-0" />
+              {labSettings.email}
             </li>
           </ul>
         </div>
 
-        {/* Support Section */}
-        <div className="bg-white/5 p-8 rounded-[40px] border border-white/5">
-          <h4 className="text-sm font-black mb-4 italic">Need Support?</h4>
-          <p className="text-slate-500 text-xs mb-6 font-medium leading-relaxed">Our medical experts are available 24/7 for your assistance.</p>
-          <button className="w-full py-4 bg-[#009494] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-[#009494]/20">Contact Agent</button>
+        <div className="rounded-[12px] border border-white/10 bg-white/[0.08] p-8">
+          <ShieldCheck size={32} className="mb-6" />
+          <h3 className="text-lg font-black">Need support?</h3>
+          <p className="mt-4 text-sm font-medium leading-6 opacity-70">
+            Our care team can help you choose a package or reschedule a collection.
+          </p>
+          <a href={`tel:${labSettings.contact}`} className="mt-8 inline-flex w-full justify-center rounded-[10px] bg-white px-5 py-4 text-xs font-black uppercase tracking-[0.14em] text-zinc-950 transition hover:bg-white/90">
+            Contact care team
+          </a>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto border-t border-white/5 mt-20 pt-10 flex flex-col md:row items-center justify-between gap-6 text-[10px] font-black uppercase tracking-widest text-slate-600">
-        <p>© 2026 {labSettings.labName}. All Rights Reserved.</p>
-        <div className="flex gap-8">
-          <span className="hover:text-white cursor-pointer transition-colors">Privacy Policy</span>
-          <span className="hover:text-white cursor-pointer transition-colors">Terms of Service</span>
+      <div className="mx-auto mt-16 flex max-w-7xl flex-col justify-between gap-6 border-t border-white/10 pt-12 text-xs font-bold opacity-60 md:flex-row md:items-center">
+        <p>Copyright 2026 {labSettings.labName}. All rights reserved.</p>
+        <div className="flex gap-6">
+          <span>Privacy Policy</span>
+          <span>Terms of Service</span>
         </div>
       </div>
-      
-      {/* Decorative Glow */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-[#009494]/10 blur-[100px] rounded-full"></div>
     </footer>
   );
 };

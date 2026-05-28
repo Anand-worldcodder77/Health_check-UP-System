@@ -1,25 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { Save, Building2, MapPin, Phone, Globe, ShieldCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { Save, Building2, MapPin, Phone, ShieldCheck } from 'lucide-react';
 
 const LabSettings = () => {
-  const [labData, setLabData] = useState({
-    labName: 'City Clinical Lab',
-    contact: '+91 98765 43210',
-    address: '123 Health Street, Medical Hub',
-    email: 'contact@citylab.com',
-    timing: '08:00 AM - 08:00 PM'
-  });
-
-  // Load data from localStorage on mount
-  useEffect(() => {
+  const [labData, setLabData] = useState(() => {
+    const defaults = {
+      labName: 'City Clinical Lab',
+      contact: '+91 98765 43210',
+      address: '123 Health Street, Medical Hub',
+      email: 'contact@citylab.com',
+      timing: '08:00 AM - 08:00 PM'
+    };
     const savedData = localStorage.getItem('labSettings');
-    if (savedData) setLabData(JSON.parse(savedData));
-  }, []);
+    return savedData ? { ...defaults, ...JSON.parse(savedData) } : defaults;
+  });
 
   const handleSave = (e) => {
     e.preventDefault();
     localStorage.setItem('labSettings', JSON.stringify(labData));
-    alert("Lab Settings Updated Successfully! 🚀");
+    alert("Lab settings updated successfully.");
     window.location.reload(); // Refresh to apply changes everywhere
   };
 
