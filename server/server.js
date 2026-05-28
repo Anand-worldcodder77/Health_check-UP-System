@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-require('dotenv').config();
+const fs = require('fs');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 // --- 1. ROUTES & MODELS IMPORT ---
 const callbackRoutes = require('./routes/callbackRoutes');
@@ -26,12 +27,12 @@ const app = express();
 // --- 2. MIDDLEWARES ---
 app.use(express.json());
 app.use(cors());
-app.use('/uploads', express.static('uploads'));
-app.use('/uploads/reports', express.static('uploads/reports'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads/reports', express.static(path.join(__dirname, 'uploads', 'reports')));
 
 // --- 3. MULTER STORAGE SETUP ---
 const storage = multer.diskStorage({
-  destination: './uploads/',
+  destination: path.join(__dirname, 'uploads'),
   filename: (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
   }
@@ -48,7 +49,7 @@ const upload = multer({
 });
 
 const reportStorage = multer.diskStorage({
-  destination: './uploads/reports/',
+  destination: path.join(__dirname, 'uploads', 'reports'),
   filename: (req, file, cb) => {
     cb(null, `Report-${Date.now()}-${file.originalname}`);
   }
@@ -279,7 +280,16 @@ app.delete('/api/bookings/delete/:id', async (req, res) => {
   }
 });
 
-// --- 7. SERVER START ---
+// --- 7. PRODUCTION FRONTEND SERVING ---
+const clientDistPath = path.join(__dirname, '..', 'client', 'dist');
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+  app.get(/^(?!\/api|\/uploads).*/, (req, res) => {
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+}
+
+// --- 8. SERVER START ---
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);

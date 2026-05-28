@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node server.js",
     "create-admin": "node scripts/createAdmin.js",
     "create-staff": "node scripts/createStaff.js",
     "seed-doctor-applications": "node scripts/seedDoctorApplications.js",
