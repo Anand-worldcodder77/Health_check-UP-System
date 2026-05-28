@@ -67,9 +67,24 @@ const uploadReport = multer({
 });
 
 // --- 4. DATABASE CONNECTION ---
+mongoose.set('bufferCommands', false);
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected Successfully!"))
   .catch((err) => console.log("❌ Connection Error:", err));
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    ok: true,
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+  });
+});
+
+app.use('/api', (req, res, next) => {
+  if (mongoose.connection.readyState === 1) return next();
+  return res.status(503).json({
+    error: 'Database is not connected. Check MONGO_URI and MongoDB Atlas network access on Render.',
+  });
+});
 
 // --- 5. SYSTEM INTEGRATIONS ---
 app.use('/api/callbacks', callbackRoutes); 
