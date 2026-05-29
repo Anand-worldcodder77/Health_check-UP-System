@@ -68,14 +68,42 @@ const uploadReport = multer({
 
 // --- 4. DATABASE CONNECTION ---
 mongoose.set('bufferCommands', false);
+let lastDatabaseError = null;
+
+const getMongoUriInfo = () => {
+  const mongoUri = process.env.MONGO_URI || '';
+  return {
+    configured: Boolean(mongoUri),
+    type: mongoUri.startsWith('mongodb+srv://') ? 'atlas-srv' : mongoUri.startsWith('mongodb://') ? 'mongodb' : 'unknown',
+    usesLocalhost: /localhost|127\.0\.0\.1/.test(mongoUri),
+  };
+};
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected Successfully!"))
-  .catch((err) => console.log("❌ Connection Error:", err));
+  .catch((err) => {
+    lastDatabaseError = err.message;
+    console.log("❌ Connection Error:", err.message);
+  });
+
+mongoose.connection.on('connected', () => {
+  lastDatabaseError = null;
+});
+
+mongoose.connection.on('error', (err) => {
+  lastDatabaseError = err.message;
+  console.log("MongoDB Runtime Error:", err.message);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log("MongoDB Disconnected");
+});
 
 app.get('/api/health', (req, res) => {
   res.json({
     ok: true,
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    mongoUri: getMongoUriInfo(),
+    lastDatabaseError,
   });
 });
 
