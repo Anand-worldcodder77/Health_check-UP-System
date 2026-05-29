@@ -3,28 +3,41 @@ require('dotenv').config();
 
 const User = require('../models/User');
 
-async function createStaff() {
-  const {
-    MONGO_URI,
-    STAFF_NAME,
-    STAFF_EMAIL,
-    STAFF_PHONE,
-    STAFF_PASSWORD,
-    STAFF_ROLE,
-  } = process.env;
+const allowedRoles = ['ADMIN', 'DOCTOR', 'LAB_STAFF', 'PHLEBOTOMIST', 'PATHOLOGIST'];
 
-  const role = (STAFF_ROLE || '').trim().toUpperCase();
+function getStaffAccounts() {
+  const indexedAccounts = Object.keys(process.env)
+    .map((key) => key.match(/^STAFF_(\d+)_ROLE$/)?.[1])
+    .filter(Boolean)
+    .sort((a, b) => Number(a) - Number(b))
+    .map((index) => ({
+      name: process.env[`STAFF_${index}_NAME`],
+      email: process.env[`STAFF_${index}_EMAIL`],
+      phone: process.env[`STAFF_${index}_PHONE`],
+      password: process.env[`STAFF_${index}_PASSWORD`],
+      role: process.env[`STAFF_${index}_ROLE`],
+    }));
 
-  if (!MONGO_URI) throw new Error('MONGO_URI is required');
-  const allowedRoles = ['ADMIN', 'DOCTOR', 'LAB_STAFF', 'PHLEBOTOMIST', 'PATHOLOGIST'];
+  if (indexedAccounts.length) return indexedAccounts;
+
+  return [{
+    name: process.env.STAFF_NAME,
+    email: process.env.STAFF_EMAIL,
+    phone: process.env.STAFF_PHONE,
+    password: process.env.STAFF_PASSWORD,
+    role: process.env.STAFF_ROLE,
+  }];
+}
+
+async function upsertStaffAccount(account) {
+  const role = (account.role || '').trim().toUpperCase();
+
   if (!allowedRoles.includes(role)) throw new Error(`STAFF_ROLE must be one of: ${allowedRoles.join(', ')}`);
-  if (!STAFF_PASSWORD || STAFF_PASSWORD.length < 8) throw new Error('STAFF_PASSWORD must be at least 8 characters');
-  if (!STAFF_EMAIL && !STAFF_PHONE) throw new Error('STAFF_EMAIL or STAFF_PHONE is required');
+  if (!account.password || account.password.length < 8) throw new Error(`${role} STAFF_PASSWORD must be at least 8 characters`);
+  if (!account.email && !account.phone) throw new Error(`${role} STAFF_EMAIL or STAFF_PHONE is required`);
 
-  await mongoose.connect(MONGO_URI);
-
-  const email = STAFF_EMAIL?.trim().toLowerCase();
-  const phone = STAFF_PHONE?.replace(/\D/g, '').slice(-10);
+  const email = account.email?.trim().toLowerCase();
+  const phone = account.phone?.replace(/\D/g, '').slice(-10);
 
   const existingUser = await User.findOne({
     $or: [
@@ -34,10 +47,10 @@ async function createStaff() {
   }).select('+password');
 
   if (existingUser) {
-    existingUser.name = STAFF_NAME || existingUser.name || role;
+    existingUser.name = account.name || existingUser.name || role;
     existingUser.email = email || existingUser.email;
     existingUser.phone = phone || existingUser.phone;
-    existingUser.password = STAFF_PASSWORD;
+    existingUser.password = account.password;
     existingUser.role = role;
     await existingUser.save();
     console.log(`${role} account updated.`);
@@ -45,14 +58,27 @@ async function createStaff() {
   }
 
   await User.create({
-    name: STAFF_NAME || role,
+    name: account.name || role,
     ...(email ? { email } : {}),
     ...(phone ? { phone } : {}),
-    password: STAFF_PASSWORD,
+    password: account.password,
     role,
   });
 
   console.log(`${role} account created.`);
+}
+
+async function createStaff() {
+  const { MONGO_URI } = process.env;
+
+  if (!MONGO_URI) throw new Error('MONGO_URI is required');
+
+  await mongoose.connect(MONGO_URI);
+
+  const staffAccounts = getStaffAccounts();
+  for (const account of staffAccounts) {
+    await upsertStaffAccount(account);
+  }
 }
 
 createStaff()
