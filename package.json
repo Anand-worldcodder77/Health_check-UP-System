@@ -7,6 +7,8 @@
   },
   "scripts": {
     "build": "npm install --prefix server && npm install --prefix client && npm run build --prefix client",
-    "start": "npm start --prefix server"
+    "start": "npm start --prefix server",
+    "create-staff": "npm run create-staff --prefix server",
+    "create-admin": "npm run create-admin --prefix server"
   }
 }
